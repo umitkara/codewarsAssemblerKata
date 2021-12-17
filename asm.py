@@ -1,25 +1,12 @@
 from enum import Enum
 from typing import List
-
-# Extended Dictionary class to reach dictionary elements by '.' notation
-class DotDict(dict):
-    __getattr__ = dict.__getitem__
-    __setattr__ = dict.__setitem__
-    __delattr__ = dict.__delitem__
     
 # Enum for the different types of instructions
 class InstructionType(Enum):
-    MOV = 1
-    mov = 1
-    
-    INC = 2
-    inc = 2
-    
-    DEC = 3
-    dec = 3
-    
-    JNZ = 4
-    jnz = 4
+    MOV = mov = 1
+    INC = inc = 2
+    DEC = dec = 3
+    JNZ = jnz = 4
 
 # Node class for the assembly instructions
 class instructionNode:
@@ -45,7 +32,7 @@ class instructionNode:
 executionList:List[instructionNode] = []
 
 # Register dictionary
-registers = DotDict()
+registers = {}
 
 def assemblyParser(code_lines:List[str]):
     for line in code_lines:
@@ -67,14 +54,12 @@ def executeInstructions():
             reg = instruction.operand1
             if reg not in registers:
                 registers[reg] = 0
-            src:str = instruction.operand2
-            registers[instruction.operand1] = registers[src] if src.isalpha() else int(src)
+            registers[instruction.operand1] = registers[instruction.operand2] if instruction.operand2.isalpha() else int(instruction.operand2)
         elif instruction.instructionType == InstructionType.JNZ:
-            src = instruction.operand1
-            if src.isalpha() and registers[src] != 0:
+            if instruction.operand1.isalpha() and registers[instruction.operand1] != 0:
                 pc += int(instruction.operand2)
                 continue
-            elif src.isnumeric() and int(src) != 0:
+            elif instruction.operand1.isnumeric() and int(instruction.operand1) != 0:
                 pc += int(instruction.operand2)
                 continue
         pc += 1
