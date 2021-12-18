@@ -1,4 +1,5 @@
 from typing import List
+import re
 
 def get_int(registers:dict, register:str):  # sourcery skip: default-get
     register = register.replace(',','')
@@ -29,13 +30,14 @@ def comment_label(program:List[str]):
         i += 1
     return (labels,program)
 
-def simple_assembler(program:List[str]):
+def simple_assembler(program:str):
+    program = program.split('\n')
     registers = {}
     labels,program = comment_label(program)
     stack = []
     i = 0
     last_compare = 0
-    message = ""
+    message_args = ""
     while i < len(program):
         instruction, *operands = program[i].split(' ')
         if instruction == 'mov':
@@ -58,7 +60,7 @@ def simple_assembler(program:List[str]):
             register = operands[0].replace(',','')
             registers[register] //= get_int(registers, operands[1])
         elif instruction == 'jmp':
-            i += get_label(labels, operands[0]) - 1
+            i = get_label(labels, operands[0])
         elif instruction == 'cmp':
             x = get_int(registers, operands[0])
             y = get_int(registers, operands[1])
@@ -70,50 +72,61 @@ def simple_assembler(program:List[str]):
                 last_compare = 1
         elif instruction == 'jne':
             if last_compare != 0:
-                i += get_label(labels, operands[0]) - 1
+                i = get_label(labels, operands[0])
         elif instruction == 'je':
             if last_compare == 0:
-                i += get_label(labels, operands[0]) - 1
+                i = get_label(labels, operands[0])
         elif instruction == 'jge':
             if last_compare >= 0:
-                i += get_label(labels, operands[0]) - 1
+                i = get_label(labels, operands[0])
         elif instruction == 'jg':
             if last_compare > 0:
-                i += get_label(labels, operands[0]) - 1
+                i = get_label(labels, operands[0])
         elif instruction == 'jle':
             if last_compare <= 0:
-                i += get_label(labels, operands[0]) - 1
+                i = get_label(labels, operands[0])
         elif instruction == 'jl':
             if last_compare < 0:
-                i += get_label(labels, operands[0]) - 1
+                i = get_label(labels, operands[0])
         elif instruction == 'call':
             stack.append(i + 1)
             i = get_label(labels, operands[0])
         elif instruction == 'ret':
             i = stack.pop() - 1
         elif instruction == 'msg':
-            message = "".join(operands)
+            message_args = " ".join(operands)
         elif instruction == 'end':
-            if message:
-                return message
-            else:
+            message_args = re.split(r",(?=(?:[^\"']*[\"'][^\"']*[\"'])*[^\"']*$)", message_args)
+            if not message_args:
                 return register
+            message = ""
+            for arg in message_args:
+                arg = re.sub(r"^\s+|\s+$", "", arg)
+                if arg.startswith('\'') and arg.endswith('\''):
+                    message += arg[1:-1]
+                else:
+                    message += str(get_int(registers, arg.replace(' ','')))
+            return message
         elif instruction == 'jnz' and get_int(registers, operands[0]): #(registers[operands[0]] if operands[0] in registers else int(operands[0])):
             i += int(operands[1])-1
         i += 1
     return -1
 
-code = """
-; My first program
-mov  a, 5
-inc  a
-call function
-msg  '(5+1)/2 = ', a    ; output message
+code = '''
+mov   a, 11           ; value1
+mov   b, 3            ; value2
+call  mod_func
+msg   'mod(', a, ', ', b, ') = ', d        ; output
 end
 
-function:
-    div  a, 2
+; Mod function
+mod_func:
+    mov   c, a        ; temp1
+    div   c, b
+    mul   c, b
+    mov   d, a        ; temp2
+    sub   d, c
     ret
-"""
+'''
 
-print(simple_assembler(code.split('\n')))
+print(simple_assembler(code))
